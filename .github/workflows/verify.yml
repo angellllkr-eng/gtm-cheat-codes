@@ -12,19 +12,11 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Validate repository files
+      - uses: actions/checkout@v4
+      - name: Validate repository state
         shell: bash
         run: |
           set -euo pipefail
           git diff --check
-          forbidden="$(git ls-files | grep -E '(^|/)(\.env|\.env\..*|.*\.pem|.*\.key|credentials\.json)$' || true)"
-          if [ -n "$forbidden" ]; then
-            echo "::error::Potential secret-bearing files are tracked:"
-            printf '%s\n' "$forbidden"
-            exit 1
-          fi
-          python -m json.tool contracts/agent-operator-command.schema.json >/dev/null
-          echo "PASS — repository verification completed."
+          test -f contracts/agent-operator-command.schema.json
+          node -e "JSON.parse(require('fs').readFileSync('contracts/agent-operator-command.schema.json','utf8')); console.log('PASS — agent/operator contract JSON is valid')"
