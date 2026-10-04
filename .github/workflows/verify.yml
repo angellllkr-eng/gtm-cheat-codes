@@ -1,0 +1,30 @@
+name: Verify repository
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate repository files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          forbidden="$(git ls-files | grep -E '(^|/)(\.env|\.env\..*|.*\.pem|.*\.key|credentials\.json)$' || true)"
+          if [ -n "$forbidden" ]; then
+            echo "::error::Potential secret-bearing files are tracked:"
+            printf '%s\n' "$forbidden"
+            exit 1
+          fi
+          python -m json.tool contracts/agent-operator-command.schema.json >/dev/null
+          echo "PASS — repository verification completed."
